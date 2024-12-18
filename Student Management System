@@ -1,0 +1,98 @@
+import random
+
+import tabulate
+
+
+
+class User:
+    def __init__(self,id,courses,batches,email,phone,address,Name,user_type):
+        self.id=id
+        self.name=Name
+        self.batches=batches
+        self.email=email
+        self.phone=phone
+        self.user_type=user_type
+        self.address=address
+        self.courses=courses
+
+    def _str_(self):
+        print(self.id)
+class Courses:
+
+    def __init__(self,id,course_name,course_des,course_type):
+        self.id=id
+        self.course_name=course_name
+        self.course_des=course_des
+        self.course_type=course_type
+
+
+
+
+
+
+
+def display_in_table(obj_list):
+    # Prepare the data for the table
+    table_data = [
+        [obj.id, obj.name, obj.email, obj.phone, obj.address, obj.list_of_courses, obj.list_of_batches,
+         obj.user_type] for obj in obj_list]
+    headers = ["ID", "Name", "Email", "Phone", "Address", "List Of Courses", "List Of Batches", "User Type"]
+
+    # Display the data in a tabular format
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+
+class Functions:
+    def generate_id(self,type_of_user):
+        per_id=type_of_user+str(random.randint(1,99000))
+
+        if self.validate_id(type_of_user,per_id):
+            return per_id
+        self.generate_id(type_of_user)
+
+    def validate_id(type_of_user, id):
+        if type_of_user.lower() == "staff" or type_of_user.lower() == "student":
+             for data in list_of_user:
+                 if data.id == id:
+                    return False
+             return True
+
+    def add_user(self):
+        type_of_user = input("1.Staff\n"
+                             "2.Student")
+        user_type = {1: "Staff", 2: "Student"}
+        user_obj = User(func.generate_id(user_type[type_of_user]), input("Enter the name: "),
+                    input("Enter the email: "),
+                    input("Enter the phone"), input("Enter the Address"), None, None, user_type[type_of_user])
+        list_of_user.append(user_obj)
+        print("User Created Successfully Id is: ", user_obj.id)
+
+
+
+
+if __name__=='_main_':
+    list_of_user=[]
+    list_of_course=[]
+    func=Functions()
+    while True:
+        choice = int(input(f"1. Add User\n"
+                           f"2. Add Course\n"
+                           f"7. Exit From Program"))
+
+        if choice == 1:
+            func.add_user()
+        elif choice == 2:
+            print("Adding course")
+
+        elif choice == 7:
+            break
+
+        else:
+            print("Please Choose the valid Choice: between (1 to 7)")
+
+
+
+
+
+
+
