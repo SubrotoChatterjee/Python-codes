@@ -1,0 +1,147 @@
+import mysql.connector
+import hashlib
+
+
+# Database connection setup
+def connect_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="Golu@2005",
+        database="ticket_booking"  # ✅ Database selected
+    )
+
+
+# Ensure database exists
+def create_database():
+    db = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="Golu@2005"
+    )
+    cursor = db.cursor()
+    cursor.execute("CREATE DATABASE IF NOT EXISTS ticket_booking")
+    cursor.close()
+    db.close()
+
+
+# Create necessary tables
+def setup_database():
+    create_database()  # ✅ Ensure database exists first
+    db = connect_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        user_id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        phone VARCHAR(15),
+        role ENUM('user', 'admin') DEFAULT 'user'
+    )""")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tickets (
+        ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+        event_name VARCHAR(255) NOT NULL,
+        date DATE NOT NULL,
+        time TIME NOT NULL,
+        venue VARCHAR(255) NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        availability INT NOT NULL
+    )""")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS bookings (
+        booking_id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT,
+        ticket_id INT,
+        booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status ENUM('confirmed', 'cancelled') DEFAULT 'confirmed',
+        payment_status ENUM('pending', 'paid', 'refunded') DEFAULT 'pending',
+        FOREIGN KEY (user_id) REFERENCES users(user_id),
+        FOREIGN KEY (ticket_id) REFERENCES tickets(ticket_id)
+    )""")
+
+    db.commit()
+    cursor.close()
+    db.close()
+
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def register_user(name, email, password, phone, role="user"):
+    db = connect_db()
+    cursor = db.cursor()
+    hashed_pw = hash_password(password)
+
+    try:
+        cursor.execute("""
+        INSERT INTO users (name, email, password, phone, role) VALUES (%s, %s, %s, %s, %s)
+        """, (name, email, hashed_pw, phone, role))
+        db.commit()
+        print("✅ User registered successfully!")
+    except mysql.connector.IntegrityError:
+        print("❌ Error: Email already exists.")
+
+    cursor.close()
+    db.close()
+
+
+def login_user(email, password):
+    db = connect_db()
+    cursor = db.cursor()
+    hashed_pw = hash_password(password)
+
+    cursor.execute("SELECT * FROM users WHERE email = %s AND password = %s", (email, hashed_pw))
+    user = cursor.fetchone()
+
+    cursor.close()
+    db.close()
+    return user
+
+
+def book_ticket(user_id, ticket_id):
+    db = connect_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT availability FROM tickets WHERE ticket_id = %s", (ticket_id,))
+    ticket = cursor.fetchone()
+
+    if ticket and ticket[0] > 0:
+        cursor.execute("""
+        INSERT INTO bookings (user_id, ticket_id, status, payment_status) VALUES (%s, %s, 'confirmed', 'pending')
+        """, (user_id, ticket_id))
+        cursor.execute("UPDATE tickets SET availability = availability - 1 WHERE ticket_id = %s", (ticket_id,))
+        db.commit()
+        print("✅ Ticket booked successfully!")
+    else:
+        print("❌ Ticket not available.")
+
+    cursor.close()
+    db.close()
+
+
+def view_bookings(user_id):
+    db = connect_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+    SELECT bookings.booking_id, tickets.event_name, tickets.date, tickets.time, tickets.venue, tickets.price, bookings.status, bookings.payment_status 
+    FROM bookings 
+    JOIN tickets ON bookings.ticket_id = tickets.ticket_id 
+    WHERE bookings.user_id = %s
+    """, (user_id,))
+
+    bookings = cursor.fetchall()
+    cursor.close()
+    db.close()
+    return bookings
+
+
+if __name__ == "__main__":
+    setup_database()
+    print("✅ Database setup completed successfully!")
