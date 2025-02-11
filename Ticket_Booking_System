@@ -8,7 +8,7 @@ def connect_db():
         host="localhost",
         user="root",
         password="Golu@2005",
-        database="ticket_booking"  # ✅ Database selected
+        database="ticket_booking"
     )
 
 
@@ -27,7 +27,7 @@ def create_database():
 
 # Create necessary tables
 def setup_database():
-    create_database()  # ✅ Ensure database exists first
+    create_database()  
     db = connect_db()
     cursor = db.cursor()
 
@@ -83,9 +83,9 @@ def register_user(name, email, password, phone, role="user"):
         INSERT INTO users (name, email, password, phone, role) VALUES (%s, %s, %s, %s, %s)
         """, (name, email, hashed_pw, phone, role))
         db.commit()
-        print("✅ User registered successfully!")
+        print(" User registered successfully!")
     except mysql.connector.IntegrityError:
-        print("❌ Error: Email already exists.")
+        print(" Error: Email already exists.")
 
     cursor.close()
     db.close()
@@ -96,7 +96,7 @@ def login_user(email, password):
     cursor = db.cursor()
     hashed_pw = hash_password(password)
 
-    cursor.execute("SELECT * FROM users WHERE email = %s AND password = %s", (email, hashed_pw))
+    cursor.execute("SELECT user_id, name, role FROM users WHERE email = %s AND password = %s", (email, hashed_pw))
     user = cursor.fetchone()
 
     cursor.close()
@@ -117,9 +117,9 @@ def book_ticket(user_id, ticket_id):
         """, (user_id, ticket_id))
         cursor.execute("UPDATE tickets SET availability = availability - 1 WHERE ticket_id = %s", (ticket_id,))
         db.commit()
-        print("✅ Ticket booked successfully!")
+        print(" Ticket booked successfully!")
     else:
-        print("❌ Ticket not available.")
+        print(" Ticket not available.")
 
     cursor.close()
     db.close()
@@ -144,4 +144,61 @@ def view_bookings(user_id):
 
 if __name__ == "__main__":
     setup_database()
-    print("✅ Database setup completed successfully!")
+    print("Database setup completed successfully!")
+
+    while True:
+        print("\n1. Register User")
+        print("2. Login User")
+        print("3. Book Ticket")
+        print("4. View Bookings")
+        print("5. Exit")
+
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+            name = input("Enter your name: ")
+            email = input("Enter your email: ")
+            password = input("Enter your password: ")
+            phone = input("Enter your phone number: ")
+            register_user(name, email, password, phone)
+
+        elif choice == "2":
+            email = input("Enter your email: ")
+            password = input("Enter your password: ")
+            user = login_user(email, password)
+            if user:
+                print(f" Login successful! Welcome, {user[1]}.")
+                user_id = user[0]
+            else:
+                print(" Invalid credentials.")
+
+        elif choice == "3":
+            if "user_id" in locals():
+                ticket_id = int(input("Enter Ticket ID: "))
+                book_ticket(user_id, ticket_id)
+            else:
+                print(" Please login first.")
+
+        elif choice == "4":
+            if "user_id" in locals():
+                bookings = view_bookings(user_id)
+                if bookings:
+                    for b in bookings:
+                        print(f" Booking ID: {b[0]}, Event: {b[1]}, Date: {b[2]}, Time: {b[3]}, Venue: {b[4]}, Price: {b[5]}, Status: {b[6]}, Payment: {b[7]}")
+                else:
+                    print(" No bookings found.")
+            else:
+                print(" Please login first.")
+
+        elif choice == "5":
+            print(" Exiting program.")
+            break
+
+        else:
+            print(" Invalid choice. Please try again.")
+
+
+
+
+
+
