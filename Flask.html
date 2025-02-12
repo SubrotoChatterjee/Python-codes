@@ -1,0 +1,182 @@
+from flask import Flask, render_template, request, redirect, jsonify
+import uuid
+import json
+import os
+
+app = Flask(__name__)
+
+# JSON file to store user data
+USER_FILE = "users.json"
+
+# Function to load users from a JSON file
+def load_users():
+    if os.path.exists(USER_FILE):
+        try:
+            with open(USER_FILE, "r") as file:
+                return json.load(file)
+        except json.JSONDecodeError:
+            return {}  # If file is empty or corrupted, return an empty dict
+    return {}
+
+# Function to save users to a JSON file
+def save_users(users):
+    with open(USER_FILE, "w") as file:
+        json.dump(users, file, indent=4)
+
+# Load existing users when the app starts
+users = load_users()
+
+@app.route("/")
+def index():
+    return render_template("index.html", users=users, users_json=json.dumps(users))  # Convert users to JSON string
+
+@app.route("/add", methods=["POST"])
+def add_user():
+    name = request.form["name"]
+    email = request.form["email"]
+    phone = request.form["phone"]
+    address = request.form["address"]
+    skills = request.form["skills"].split(", ")
+
+    # Generate a unique ID
+    user_id = str(uuid.uuid4())
+    users[email] = {"id": user_id, "name": name, "phone": phone, "address": address, "skills": skills}
+
+    # Save to JSON file
+    save_users(users)
+
+    return redirect("/")
+
+@app.route("/update", methods=["POST"])
+def update_user():
+    email = request.form["email"]
+    if email in users:
+        users[email]["name"] = request.form["name"]
+        users[email]["phone"] = request.form["phone"]
+        users[email]["address"] = request.form["address"]
+        users[email]["skills"] = request.form["skills"].split(", ")
+
+        # Save updated data to JSON file
+        save_users(users)
+
+    return redirect("/")
+
+@app.route("/delete", methods=["POST"])
+def delete_user():
+    email = request.form["email"]
+    if email in users:
+        del users[email]
+
+        # Save updated data to JSON file
+        save_users(users)
+
+    return redirect("/")
+
+@app.route("/users_json")
+def get_users_json():
+    return jsonify(users)  # Return users in proper JSON format
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+
+
+#HTML CODE FOR ABOVE SET 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+</head>
+<body>
+
+    <h1>User Management</h1>
+
+    <h2>Add User</h2>
+    <form action="/add" method="post">
+        <input type="text" name="name" placeholder="Name" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="text" name="phone" placeholder="Phone" required>
+        <input type="text" name="address" placeholder="Address" required>
+        <input type="text" name="skills" placeholder="Skills (comma-separated)" required>
+        <button type="submit">Add User</button>
+    </form>
+
+    <h2>All Users</h2>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Skills</th>
+            <th>Actions</th>
+        </tr>
+        {% for email, user in users.items() %}
+        <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.name }}</td>
+            <td>{{ email }}</td>
+            <td>{{ user.phone }}</td>
+            <td>{{ user.address }}</td>
+            <td>{{ ', '.join(user.skills) }}</td>
+            <td>
+                <form action="/delete" method="post" style="display:inline;">
+                    <input type="hidden" name="email" value="{{ email }}">
+                    <button type="submit">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Update User</h2>
+    <form action="/update" method="post">
+        <select name="email" id="update-email" required>
+            <option disabled selected>Select User</option>
+            {% for email, user in users.items() %}
+            <option value="{{ email }}">{{ email }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" id="update-name" name="name" placeholder="Name" required>
+        <input type="text" id="update-phone" name="phone" placeholder="Phone" required>
+        <input type="text" id="update-address" name="address" placeholder="Address" required>
+        <input type="text" id="update-skills" name="skills" placeholder="Skills (comma-separated)" required>
+        <button type="submit">Update</button>
+    </form>
+
+    <h2>Delete User</h2>
+    <form action="/delete" method="post">
+        <select name="email" required>
+            <option disabled selected>Select User</option>
+            {% for email in users.keys() %}
+            <option value="{{ email }}">{{ email }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Delete</button>
+    </form>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let users = JSON.parse('{{ users_json|tojson|safe }}');
+
+            function populateUpdateFields() {
+                let emailSelect = document.getElementById("update-email");
+                let selectedEmail = emailSelect.value;
+
+                if (users[selectedEmail]) {
+                    document.getElementById("update-name").value = users[selectedEmail].name || "";
+                    document.getElementById("update-phone").value = users[selectedEmail].phone || "";
+                    document.getElementById("update-address").value = users[selectedEmail].address || "";
+                    document.getElementById("update-skills").value = users[selectedEmail].skills.join(", ") || "";
+                }
+            }
+
+            document.getElementById("update-email").addEventListener("change", populateUpdateFields);
+        });
+    </script>
+
+</body>
+</html>
